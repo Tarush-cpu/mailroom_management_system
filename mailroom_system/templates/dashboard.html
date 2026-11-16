@@ -1,0 +1,473 @@
+{% extends "base.html" %}
+
+{% block title %}Mailroom Operations Dashboard{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8" x-data="dashboardManager()">
+
+  <!-- Top Page Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Mailroom Operations</h1>
+        <span class="px-2.5 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
+          {{ current_user['role'] | capitalize }}
+        </span>
+      </div>
+      <p class="text-xs sm:text-sm text-slate-500 mt-1">
+        Centralized package intake, bin allocation, and handover verification console.
+      </p>
+    </div>
+
+    <!-- Quick Buttons -->
+    <div class="flex items-center gap-3">
+      <a href="{{ url_for('export_csv') }}" 
+         class="px-3.5 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold transition-all shadow-sm flex items-center gap-1.5">
+        <i data-lucide="download" class="w-4 h-4 text-slate-500"></i>
+        <span>Export CSV</span>
+      </a>
+
+      <a href="{{ url_for('intake') }}" 
+         class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-all shadow-md shadow-indigo-200 flex items-center gap-2">
+        <i data-lucide="plus-circle" class="w-4 h-4"></i>
+        <span>New Package Intake</span>
+      </a>
+    </div>
+  </div>
+
+  <!-- Operational Metrics Cards -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+    
+    <!-- Total Active -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-soft">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Recorded</span>
+        <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+          <i data-lucide="package" class="w-4 h-4"></i>
+        </div>
+      </div>
+      <div class="mt-3">
+        <div class="text-2xl sm:text-3xl font-extrabold text-slate-900">{{ stats.total }}</div>
+        <p class="text-[11px] text-slate-400 mt-0.5">All packages in register</p>
+      </div>
+    </div>
+
+    <!-- Ready for Pickup -->
+    <div class="bg-white p-5 rounded-2xl border border-emerald-200 shadow-soft relative overflow-hidden">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-emerald-700 uppercase tracking-wider">Awaiting Pickup</span>
+        <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+          <i data-lucide="bell-ring" class="w-4 h-4"></i>
+        </div>
+      </div>
+      <div class="mt-3">
+        <div class="text-2xl sm:text-3xl font-extrabold text-emerald-900">{{ stats.ready }}</div>
+        <p class="text-[11px] text-emerald-600 font-medium mt-0.5 flex items-center gap-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+          Occupying mailroom bins
+        </p>
+      </div>
+    </div>
+
+    <!-- Handed Over Today -->
+    <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-soft">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-500 uppercase tracking-wider">Handed Over Today</span>
+        <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+          <i data-lucide="check-check" class="w-4 h-4"></i>
+        </div>
+      </div>
+      <div class="mt-3">
+        <div class="text-2xl sm:text-3xl font-extrabold text-slate-900">{{ stats.collected_today }}</div>
+        <p class="text-[11px] text-slate-400 mt-0.5">Dispatched to residents</p>
+      </div>
+    </div>
+
+    <!-- Overdue Warning -->
+    <div class="bg-white p-5 rounded-2xl border {{ 'border-amber-300 bg-amber-50/30' if stats.overdue > 0 else 'border-slate-200/80' }} shadow-soft">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold {{ 'text-amber-800' if stats.overdue > 0 else 'text-slate-500' }} uppercase tracking-wider">Overdue (>48h)</span>
+        <div class="w-9 h-9 rounded-xl {{ 'bg-amber-100 text-amber-700' if stats.overdue > 0 else 'bg-slate-100 text-slate-500' }} flex items-center justify-center">
+          <i data-lucide="clock" class="w-4 h-4"></i>
+        </div>
+      </div>
+      <div class="mt-3">
+        <div class="text-2xl sm:text-3xl font-extrabold {{ 'text-amber-900' if stats.overdue > 0 else 'text-slate-900' }}">{{ stats.overdue }}</div>
+        <p class="text-[11px] {{ 'text-amber-700 font-medium' if stats.overdue > 0 else 'text-slate-400' }} mt-0.5">
+          {{ 'Pending resident reminder' if stats.overdue > 0 else 'All pickups on schedule' }}
+        </p>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Search & Filter Controls -->
+  <div class="bg-white rounded-2xl border border-slate-200/80 p-4 sm:p-5 shadow-soft">
+    <form method="GET" action="{{ url_for('dashboard') }}" class="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+      
+      <!-- Search Input -->
+      <div class="sm:col-span-4 relative">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5"></i>
+        <input type="text" name="q" value="{{ search_query }}"
+               placeholder="Search tracking, recipient, flat, phone, OTP..."
+               class="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all">
+      </div>
+
+      <!-- Status Filter -->
+      <div class="sm:col-span-3">
+        <select name="status" onchange="this.form.submit()"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all">
+          <option value="all" {{ 'selected' if status_filter == 'all' }}>All Statuses</option>
+          <option value="Ready for Pickup" {{ 'selected' if status_filter == 'Ready for Pickup' }}>Ready for Pickup (Active)</option>
+          <option value="Collected" {{ 'selected' if status_filter == 'Collected' }}>Collected (Archived)</option>
+        </select>
+      </div>
+
+      <!-- Courier Filter -->
+      <div class="sm:col-span-2">
+        <select name="courier" onchange="this.form.submit()"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all">
+          <option value="all" {{ 'selected' if courier_filter == 'all' }}>All Couriers</option>
+          {% for c in couriers %}
+            <option value="{{ c }}" {{ 'selected' if courier_filter == c }}>{{ c }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Bin Filter -->
+      <div class="sm:col-span-2">
+        <select name="bin" onchange="this.form.submit()"
+                class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all">
+          <option value="all" {{ 'selected' if bin_filter == 'all' }}>All Storage Bins</option>
+          {% for b in storage_bins %}
+            <option value="{{ b }}" {{ 'selected' if bin_filter == b }}>{{ b }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Reset / Filter Button -->
+      <div class="sm:col-span-1 flex gap-2">
+        <button type="submit" class="w-full py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center transition-colors" title="Apply Filter">
+          <i data-lucide="filter" class="w-4 h-4"></i>
+        </button>
+        {% if search_query or status_filter != 'all' or courier_filter != 'all' or bin_filter != 'all' %}
+          <a href="{{ url_for('dashboard') }}" class="p-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs flex items-center justify-center transition-colors" title="Clear Filters">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+
+  <!-- Package Register Table -->
+  <div class="bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-hidden">
+    
+    <div class="p-4 sm:p-5 border-b border-slate-100 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <span class="text-xs font-bold text-slate-800 uppercase tracking-wider">Packages Register</span>
+        <span class="text-xs text-slate-400">({{ packages|length }} items shown)</span>
+      </div>
+      <div class="text-[11px] text-slate-400">
+        Click <span class="font-semibold text-emerald-600">Hand Over</span> to process collection
+      </div>
+    </div>
+
+    {% if packages %}
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200/60">
+            <tr>
+              <th class="py-3 px-4">Tracking ID & Type</th>
+              <th class="py-3 px-4">Carrier</th>
+              <th class="py-3 px-4">Recipient</th>
+              <th class="py-3 px-4">Unit / Flat</th>
+              <th class="py-3 px-4">Storage Location</th>
+              <th class="py-3 px-4">Status</th>
+              <th class="py-3 px-4">Arrival Date</th>
+              <th class="py-3 px-4 text-center">Handover OTP</th>
+              <th class="py-3 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for p in packages %}
+            <tr class="hover:bg-slate-50/70 transition-colors">
+              
+              <!-- Tracking & Type -->
+              <td class="py-3.5 px-4">
+                <a href="{{ url_for('package_detail', package_id=p['id']) }}" class="font-mono font-bold text-indigo-600 hover:underline">
+                  {{ p['tracking_number'] }}
+                </a>
+                <div class="flex items-center gap-1.5 mt-1 text-[11px] text-slate-500">
+                  <span class="inline-flex items-center gap-1 px-1.5 py-0.2 rounded bg-slate-100 font-medium">
+                    {% if p['package_type'] == 'Envelope' %}
+                      <i data-lucide="mail" class="w-3 h-3 text-slate-500"></i>
+                    {% elif p['package_type'] == 'Fragile' %}
+                      <i data-lucide="alert-triangle" class="w-3 h-3 text-amber-500"></i>
+                    {% elif p['package_type'] == 'Perishable' %}
+                      <i data-lucide="snowflake" class="w-3 h-3 text-sky-500"></i>
+                    {% elif p['package_type'] == 'Heavy' %}
+                      <i data-lucide="weight" class="w-3 h-3 text-purple-500"></i>
+                    {% else %}
+                      <i data-lucide="box" class="w-3 h-3 text-slate-500"></i>
+                    {% endif %}
+                    {{ p['package_type'] }}
+                  </span>
+                  {% if p['weight'] %}
+                    <span>&bull; {{ p['weight'] }}</span>
+                  {% endif %}
+                </div>
+              </td>
+
+              <!-- Carrier -->
+              <td class="py-3.5 px-4 font-medium text-slate-700">
+                <div class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100/90 text-slate-800">
+                  {{ p['courier_name'] }}
+                </div>
+              </td>
+
+              <!-- Recipient -->
+              <td class="py-3.5 px-4">
+                <div class="font-bold text-slate-900">{{ p['recipient_name'] }}</div>
+                <div class="text-[11px] text-slate-500">{{ p['recipient_phone'] or 'No phone' }}</div>
+              </td>
+
+              <!-- Unit -->
+              <td class="py-3.5 px-4">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-indigo-50/70 text-indigo-900 font-semibold text-xs border border-indigo-100">
+                  <i data-lucide="building" class="w-3 h-3 text-indigo-500"></i>
+                  {{ p['recipient_unit'] }}
+                </span>
+              </td>
+
+              <!-- Storage Bin -->
+              <td class="py-3.5 px-4">
+                <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-900 border border-amber-200/80 font-mono font-bold text-xs shadow-sm">
+                  <i data-lucide="map-pin" class="w-3 h-3 text-amber-600"></i>
+                  {{ p['storage_bin'] }}
+                </span>
+              </td>
+
+              <!-- Status -->
+              <td class="py-3.5 px-4">
+                {% if p['status'] == 'Ready for Pickup' %}
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold text-[11px]">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Ready for Pickup
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 border border-slate-200 font-semibold text-[11px]">
+                    <i data-lucide="check" class="w-3 h-3 text-slate-500"></i>
+                    Collected
+                  </span>
+                {% endif %}
+              </td>
+
+              <!-- Arrival Date -->
+              <td class="py-3.5 px-4 text-slate-500">
+                <div>{{ p['arrival_date'][:10] }}</div>
+                <div class="text-[11px] text-slate-400">{{ p['arrival_date'][11:16] }}</div>
+              </td>
+
+              <!-- Handover OTP -->
+              <td class="py-3.5 px-4 text-center">
+                {% if p['status'] == 'Ready for Pickup' %}
+                  <span class="font-mono font-bold px-2 py-1 rounded bg-slate-100 text-slate-800 border border-slate-200" title="Security PIN for recipient handover">
+                    {{ p['pickup_code'] }}
+                  </span>
+                {% else %}
+                  <span class="text-slate-400 text-[11px] font-mono italic">Verified</span>
+                {% endif %}
+              </td>
+
+              <!-- Actions -->
+              <td class="py-3.5 px-4 text-right">
+                <div class="flex items-center justify-end gap-1.5">
+                  {% if p['status'] == 'Ready for Pickup' %}
+                    <button type="button" 
+                            @click="openHandoverModal({{ p['id'] }}, '{{ p['tracking_number'] }}', '{{ p['recipient_name'] }}', '{{ p['storage_bin'] }}', '{{ p['pickup_code'] }}')"
+                            class="px-2.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-all shadow-sm flex items-center gap-1"
+                            title="Complete Handover">
+                      <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                      <span>Hand Over</span>
+                    </button>
+                  {% endif %}
+
+                  <a href="{{ url_for('print_slip', package_id=p['id']) }}" target="_blank"
+                     class="p-1.5 rounded-lg text-slate-500 hover:text-slate-800 hover:bg-slate-100 transition-colors"
+                     title="Print Bin Slip">
+                    <i data-lucide="printer" class="w-4 h-4"></i>
+                  </a>
+
+                  <a href="{{ url_for('package_detail', package_id=p['id']) }}"
+                     class="p-1.5 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                     title="View Full History">
+                    <i data-lucide="external-link" class="w-4 h-4"></i>
+                  </a>
+                </div>
+              </td>
+
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <div class="p-12 text-center">
+        <div class="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+          <i data-lucide="package-open" class="w-6 h-6"></i>
+        </div>
+        <h4 class="text-sm font-bold text-slate-800">No packages found</h4>
+        <p class="text-xs text-slate-500 mt-1">Try adjusting your search criteria or register a new package intake.</p>
+        <a href="{{ url_for('intake') }}" class="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          Register Package
+        </a>
+      </div>
+    {% endif %}
+
+  </div>
+
+  <!-- Handover Verification Modal -->
+  <div x-show="handoverModalOpen" x-cloak
+       class="fixed inset-0 z-50 overflow-y-auto p-4 flex items-center justify-center">
+    
+    <!-- Backdrop -->
+    <div @click="handoverModalOpen = false" 
+         x-show="handoverModalOpen"
+         x-transition:enter="ease-out duration-200"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
+         x-transition:leave="ease-in duration-150"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"></div>
+
+    <!-- Modal Box -->
+    <div x-show="handoverModalOpen"
+         x-transition:enter="ease-out duration-200"
+         x-transition:enter-start="opacity-0 scale-95"
+         x-transition:enter-end="opacity-100 scale-100"
+         x-transition:leave="ease-in duration-150"
+         x-transition:leave-start="opacity-100 scale-100"
+         x-transition:leave-end="opacity-0 scale-95"
+         class="relative bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl z-10 border border-slate-200">
+      
+      <div class="flex items-center justify-between pb-4 border-b border-slate-100">
+        <div class="flex items-center gap-2">
+          <div class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center">
+            <i data-lucide="shield-check" class="w-4 h-4"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">Verify Package Handover</h3>
+            <p class="text-[11px] text-slate-500">Confirm identity & record collection</p>
+          </div>
+        </div>
+        <button @click="handoverModalOpen = false" class="text-slate-400 hover:text-slate-600 p-1">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <!-- Package Summary Box -->
+      <div class="mt-4 p-3 bg-slate-50 rounded-xl border border-slate-200/80 text-xs space-y-1">
+        <div class="flex justify-between">
+          <span class="text-slate-500">Tracking ID:</span>
+          <span class="font-mono font-bold text-slate-800" x-text="activePackage.tracking"></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Recipient:</span>
+          <span class="font-semibold text-slate-800" x-text="activePackage.recipient"></span>
+        </div>
+        <div class="flex justify-between">
+          <span class="text-slate-500">Bin Location:</span>
+          <span class="font-mono font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200" x-text="activePackage.bin"></span>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <form :action="'/packages/' + activePackage.id + '/handover'" method="POST" class="mt-4 space-y-4">
+        
+        <!-- Pickup OTP Input -->
+        <div>
+          <div class="flex items-center justify-between mb-1">
+            <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider">
+              6-Digit Pickup OTP *
+            </label>
+            <span class="text-[11px] text-indigo-600 cursor-pointer hover:underline"
+                  @click="document.getElementById('modal_pickup_code').value = activePackage.expectedOtp">
+              Demo autofill: <span class="font-mono font-bold" x-text="activePackage.expectedOtp"></span>
+            </span>
+          </div>
+          <div class="relative">
+            <i data-lucide="key" class="w-4 h-4 text-slate-400 absolute left-3 top-3"></i>
+            <input type="text" id="modal_pickup_code" name="pickup_code" required
+                   placeholder="Enter 6-digit code shown on resident phone"
+                   maxlength="6"
+                   class="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-center font-mono text-sm tracking-widest font-bold text-slate-900 focus:bg-white focus:ring-2 focus:ring-emerald-500 transition-all">
+          </div>
+          <p class="text-[11px] text-slate-400 mt-1">Ask recipient to show their SMS/Portal pickup PIN</p>
+        </div>
+
+        <!-- Handed over to name -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+            Collected By (Name)
+          </label>
+          <input type="text" name="collected_by_name" :value="activePackage.recipient"
+                 placeholder="Name of person picking up"
+                 class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all">
+        </div>
+
+        <!-- Handover Notes -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+            Staff Confirmation Notes
+          </label>
+          <input type="text" name="handover_notes" placeholder="e.g. Verified with ID badge, roommate collection"
+                 class="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 focus:bg-white focus:ring-2 focus:ring-indigo-500 transition-all">
+        </div>
+
+        <!-- Submit Button -->
+        <div class="pt-2 flex items-center justify-end gap-2">
+          <button type="button" @click="handoverModalOpen = false" 
+                  class="px-3.5 py-2 rounded-xl border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-slate-50 transition-colors">
+            Cancel
+          </button>
+          <button type="submit" 
+                  class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-md shadow-emerald-200 transition-all flex items-center gap-1.5">
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Confirm Handover</span>
+          </button>
+        </div>
+
+      </form>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function dashboardManager() {
+    return {
+      handoverModalOpen: false,
+      activePackage: {
+        id: null,
+        tracking: '',
+        recipient: '',
+        bin: '',
+        expectedOtp: ''
+      },
+      openHandoverModal(id, tracking, recipient, bin, expectedOtp) {
+        this.activePackage = { id, tracking, recipient, bin, expectedOtp };
+        this.handoverModalOpen = true;
+        this.$nextTick(() => {
+          lucide.createIcons();
+          const codeInput = document.getElementById('modal_pickup_code');
+          if (codeInput) codeInput.focus();
+        });
+      }
+    }
+  }
+</script>
+{% endblock %}

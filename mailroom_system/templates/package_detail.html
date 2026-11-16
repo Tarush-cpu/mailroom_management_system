@@ -1,0 +1,317 @@
+{% extends "base.html" %}
+
+{% block title %}Package {{ package['tracking_number'] }} - MailroomOS{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+
+  <!-- Success Notification if just registered -->
+  {% if just_added %}
+    <div class="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
+          <i data-lucide="check" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h3 class="text-sm font-bold text-emerald-950">Package Successfully Registered!</h3>
+          <p class="text-xs text-emerald-700">Allocated to <b>{{ package['storage_bin'] }}</b>. Handover OTP: <span class="font-mono font-bold">{{ package['pickup_code'] }}</span></p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="{{ url_for('print_slip', package_id=package['id']) }}" target="_blank"
+           class="px-3.5 py-1.5 rounded-xl bg-white border border-emerald-300 text-emerald-900 font-semibold text-xs shadow-sm hover:bg-emerald-100/50 flex items-center gap-1.5">
+          <i data-lucide="printer" class="w-4 h-4"></i>
+          <span>Print Bin Slip</span>
+        </a>
+        <a href="{{ url_for('intake') }}"
+           class="px-3.5 py-1.5 rounded-xl bg-emerald-700 text-white font-semibold text-xs shadow-sm hover:bg-emerald-800 flex items-center gap-1.5">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+          <span>Intake Next</span>
+        </a>
+      </div>
+    </div>
+  {% endif %}
+
+  <!-- Top Action & Navigation Bar -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div class="flex items-center gap-3">
+      <a href="{{ url_for('dashboard') if current_user and current_user['role'] in ['admin', 'staff'] else url_for('resident_portal') }}"
+         class="p-2 rounded-xl bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors">
+        <i data-lucide="arrow-left" class="w-4 h-4"></i>
+      </a>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-xl sm:text-2xl font-extrabold font-mono text-slate-900 tracking-tight">{{ package['tracking_number'] }}</h1>
+          {% if package['status'] == 'Ready for Pickup' %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold text-xs">
+              <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+              Ready for Pickup
+            </span>
+          {% else %}
+            <span class="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-xs">
+              <i data-lucide="check" class="w-3.5 h-3.5 text-slate-500"></i>
+              Collected
+            </span>
+          {% endif %}
+        </div>
+        <p class="text-xs text-slate-500 mt-0.5">Carrier: <span class="font-medium text-slate-700">{{ package['courier_name'] }}</span> &bull; Logged on {{ package['arrival_date'][:16] }}</p>
+      </div>
+    </div>
+
+    <!-- Top Action Buttons -->
+    <div class="flex items-center gap-2">
+      <a href="{{ url_for('print_slip', package_id=package['id']) }}" target="_blank"
+         class="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-sm flex items-center gap-1.5">
+        <i data-lucide="printer" class="w-4 h-4 text-slate-500"></i>
+        <span>Print Label / Slip</span>
+      </a>
+
+      {% if current_user and current_user['role'] in ['admin', 'staff'] %}
+        <a href="{{ url_for('edit_package', package_id=package['id']) }}"
+           class="px-3 py-2 rounded-xl bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 text-xs font-semibold shadow-sm flex items-center gap-1.5">
+          <i data-lucide="edit-3" class="w-4 h-4 text-slate-500"></i>
+          <span>Edit</span>
+        </a>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+    <!-- Left Column: Core Package Details & Actions -->
+    <div class="lg:col-span-8 space-y-6">
+
+      <!-- Status Highlight Banner -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-soft p-6">
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-6">
+          
+          <!-- Storage Bin Location -->
+          <div class="border-b sm:border-b-0 sm:border-r border-slate-100 pb-4 sm:pb-0 sm:pr-4">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Assigned Bin</span>
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-amber-50 text-amber-900 border border-amber-200/90 font-mono text-base font-extrabold shadow-sm">
+              <i data-lucide="map-pin" class="w-4 h-4 text-amber-600"></i>
+              <span>{{ package['storage_bin'] }}</span>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-2">Physical shelf location in mailroom</p>
+          </div>
+
+          <!-- Pickup Verification Code -->
+          <div class="border-b sm:border-b-0 sm:border-r border-slate-100 pb-4 sm:pb-0 sm:pr-4">
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Handover OTP</span>
+            <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-indigo-50 text-indigo-900 border border-indigo-200 font-mono text-base font-extrabold tracking-widest shadow-sm">
+              <i data-lucide="key" class="w-4 h-4 text-indigo-600"></i>
+              <span>{{ package['pickup_code'] }}</span>
+            </div>
+            <p class="text-[11px] text-slate-500 mt-2">Show at front desk to claim</p>
+          </div>
+
+          <!-- Package Type & Weight -->
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 block mb-1">Type & Weight</span>
+            <div class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+              <span>{{ package['package_type'] }}</span>
+              {% if package['weight'] %}
+                <span class="text-xs font-normal text-slate-500">({{ package['weight'] }})</span>
+              {% endif %}
+            </div>
+            <p class="text-[11px] text-slate-500 mt-2">Classification</p>
+          </div>
+
+        </div>
+
+        {% if package['recipient_notes'] %}
+          <div class="mt-6 pt-4 border-t border-slate-100 bg-slate-50/70 p-3.5 rounded-xl text-xs text-slate-700">
+            <div class="font-bold text-slate-900 flex items-center gap-1.5 mb-1">
+              <i data-lucide="info" class="w-3.5 h-3.5 text-indigo-600"></i>
+              Intake Notes:
+            </div>
+            {{ package['recipient_notes'] }}
+          </div>
+        {% endif %}
+      </div>
+
+      <!-- Handover Console (if ready for pickup and staff user) -->
+      {% if package['status'] == 'Ready for Pickup' and current_user and current_user['role'] in ['admin', 'staff'] %}
+        <div class="bg-gradient-to-br from-emerald-50 via-white to-emerald-50/40 rounded-2xl border border-emerald-200 p-6 shadow-soft">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-9 h-9 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
+              <i data-lucide="shield-check" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-emerald-950">Process Recipient Handover</h3>
+              <p class="text-xs text-emerald-700">Verify OTP presented by resident to release this package.</p>
+            </div>
+          </div>
+
+          <form action="{{ url_for('handover_package', package_id=package['id']) }}" method="POST" class="space-y-4">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Recipient Pickup OTP *
+                </label>
+                <input type="text" name="pickup_code" required
+                       placeholder="Enter 6 digits (OTP: {{ package['pickup_code'] }})"
+                       class="w-full px-3 py-2 bg-white border border-emerald-300 rounded-xl text-xs font-mono font-bold tracking-widest text-slate-900 focus:ring-2 focus:ring-emerald-500">
+              </div>
+
+              <div>
+                <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                  Collected By (Full Name)
+                </label>
+                <input type="text" name="collected_by_name" value="{{ package['recipient_name'] }}"
+                       class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500">
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1">
+                Handover Verification Notes
+              </label>
+              <input type="text" name="handover_notes" placeholder="e.g. Identity verified via resident ID badge / Roommate collection"
+                     class="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-900 focus:ring-2 focus:ring-emerald-500">
+            </div>
+
+            <div class="flex items-center justify-end">
+              <button type="submit"
+                      class="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-all shadow-md shadow-emerald-200 flex items-center gap-2">
+                <i data-lucide="check-circle" class="w-4 h-4"></i>
+                <span>Confirm & Release Package</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      {% elif package['status'] == 'Collected' %}
+        <!-- Collected Confirmation Record -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-soft">
+          <div class="flex items-center gap-3 text-slate-900 mb-3">
+            <div class="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
+              <i data-lucide="check-check" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold">Delivery Completed & Verified</h3>
+              <p class="text-xs text-slate-500">Package has been collected from the mailroom.</p>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs bg-slate-50 p-4 rounded-xl border border-slate-100">
+            <div>
+              <span class="text-slate-400 block text-[11px]">Collected By:</span>
+              <span class="font-bold text-slate-800">{{ package['collected_by_name'] or package['recipient_name'] }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[11px]">Handover Timestamp:</span>
+              <span class="font-medium text-slate-800">{{ package['collected_date'][:16] if package['collected_date'] else 'N/A' }}</span>
+            </div>
+            <div>
+              <span class="text-slate-400 block text-[11px]">Handled By Staff:</span>
+              <span class="font-medium text-slate-800">{{ package['handed_by_name'] or 'Staff Officer' }}</span>
+            </div>
+          </div>
+
+          {% if package['handover_notes'] %}
+            <p class="text-xs text-slate-600 mt-3 italic">&ldquo;{{ package['handover_notes'] }}&rdquo;</p>
+          {% endif %}
+        </div>
+      {% endif %}
+
+      <!-- Audit Activity Trail -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-soft">
+        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider mb-4 flex items-center gap-2">
+          <i data-lucide="history" class="w-4 h-4 text-indigo-600"></i>
+          Activity & Audit Log
+        </h3>
+
+        {% if logs %}
+          <div class="space-y-4 relative before:absolute before:inset-0 before:left-3.5 before:w-0.5 before:bg-slate-200">
+            {% for log in logs %}
+              <div class="relative flex items-start gap-4">
+                <div class="w-7 h-7 rounded-full bg-white border-2 border-indigo-600 text-indigo-600 flex items-center justify-center flex-shrink-0 z-10">
+                  {% if log['action'] == 'Intake' %}
+                    <i data-lucide="box" class="w-3.5 h-3.5"></i>
+                  {% elif log['action'] == 'Handover' %}
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                  {% else %}
+                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                  {% endif %}
+                </div>
+                <div class="flex-grow bg-slate-50 p-3 rounded-xl border border-slate-100 text-xs">
+                  <div class="flex items-center justify-between">
+                    <span class="font-bold text-slate-800">{{ log['action'] }} &bull; {{ log['performed_by_name'] }} ({{ log['performed_by_role'] }})</span>
+                    <span class="text-[11px] text-slate-400">{{ log['timestamp'][:16] }}</span>
+                  </div>
+                  <p class="text-slate-600 mt-1">{{ log['details'] }}</p>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="text-xs text-slate-400">No activity logged yet.</p>
+        {% endif %}
+      </div>
+
+    </div>
+
+    <!-- Right Column: Recipient Info & QR Code Card -->
+    <div class="lg:col-span-4 space-y-6">
+      
+      <!-- Digital Pickup Pass & QR Card -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-soft text-center">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">
+          Digital Pickup Pass
+        </span>
+
+        <div class="mt-4 p-3 bg-slate-50 rounded-2xl border border-slate-200/80 inline-block">
+          <img src="{{ url_for('generate_qr', tracking_number=package['tracking_number']) }}" 
+               alt="QR Code" 
+               class="w-44 h-44 rounded-xl shadow-sm mx-auto">
+        </div>
+
+        <div class="mt-3">
+          <span class="font-mono text-xs font-bold text-slate-700">{{ package['tracking_number'] }}</span>
+          <p class="text-[11px] text-slate-400 mt-0.5">Scan to verify at reception desk</p>
+        </div>
+      </div>
+
+      <!-- Recipient Card -->
+      <div class="bg-white rounded-2xl border border-slate-200 p-6 shadow-soft space-y-3">
+        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2 border-b border-slate-100 pb-2">
+          <i data-lucide="user" class="w-4 h-4 text-indigo-600"></i>
+          Recipient Profile
+        </h3>
+
+        <div class="space-y-2.5 text-xs">
+          <div>
+            <span class="text-slate-400 block text-[11px]">Name:</span>
+            <span class="font-bold text-slate-900 text-sm">{{ package['recipient_name'] }}</span>
+          </div>
+
+          <div>
+            <span class="text-slate-400 block text-[11px]">Destination Unit / Flat:</span>
+            <span class="font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-block mt-0.5">
+              {{ package['recipient_unit'] }}
+            </span>
+          </div>
+
+          <div>
+            <span class="text-slate-400 block text-[11px]">Phone:</span>
+            <span class="font-medium text-slate-800">{{ package['recipient_phone'] or 'Not provided' }}</span>
+          </div>
+
+          <div>
+            <span class="text-slate-400 block text-[11px]">Email:</span>
+            <span class="font-medium text-slate-800">{{ package['recipient_email'] or 'Not provided' }}</span>
+          </div>
+
+          <div>
+            <span class="text-slate-400 block text-[11px]">Intake Processed By:</span>
+            <span class="font-medium text-slate-800">{{ package['logged_by_name'] or 'Mailroom Staff' }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+
+{% block title %}Centralized Mailroom & Courier Hub{% endblock %}
+
+{% block content %}
+<div class="space-y-16 py-6 sm:py-10">
+
+  <!-- Hero Section -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white p-8 sm:p-14 shadow-2xl">
+      <!-- Glow ambient shapes -->
+      <div class="absolute -top-24 -right-24 w-96 h-96 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none"></div>
+      <div class="absolute -bottom-24 -left-24 w-96 h-96 bg-violet-500/20 rounded-full blur-3xl pointer-events-none"></div>
+      
+      <div class="relative z-10 max-w-3xl">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-400/20 text-indigo-300 text-xs font-semibold tracking-wide mb-6">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          Campus & Facility Mailroom Automation
+        </div>
+        
+        <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white leading-tight">
+          Eliminate paper logs. <br>
+          <span class="bg-gradient-to-r from-indigo-300 via-white to-violet-300 bg-clip-text text-transparent">Track packages from gate to resident.</span>
+        </h1>
+        
+        <p class="mt-4 text-slate-300 text-sm sm:text-base leading-relaxed max-w-2xl">
+          A centralized platform for security guards, receptionists, and residents. Log parcel arrivals in seconds, allocate shelf bins, and verify handovers with secure 6-digit OTPs.
+        </p>
+
+        <!-- Live Tracking Input in Hero -->
+        <div class="mt-8 max-w-xl">
+          <form action="{{ url_for('public_track') }}" method="POST" class="bg-white/10 backdrop-blur-md p-1.5 rounded-2xl border border-white/20 shadow-xl flex flex-col sm:flex-row gap-2">
+            <div class="relative flex-grow flex items-center">
+              <i data-lucide="package-search" class="w-5 h-5 text-indigo-300 absolute left-4"></i>
+              <input type="text" name="tracking_query" required
+                     placeholder="Enter Tracking ID (e.g. TRK-AMZ-98214) or Unit 402"
+                     class="w-full pl-12 pr-4 py-3 bg-transparent text-sm text-white placeholder-slate-400 focus:outline-none focus:ring-0">
+            </div>
+            <button type="submit" class="px-6 py-3 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold transition-all shadow-md shadow-indigo-600/30 flex items-center justify-center gap-2">
+              <span>Track Now</span>
+              <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+          </form>
+          <div class="mt-3 flex items-center gap-2 text-[11px] text-slate-400">
+            <span>Try sample tracking:</span>
+            <a href="{{ url_for('public_track', q='TRK-AMZ-98214') }}" class="text-indigo-300 hover:underline font-mono">TRK-AMZ-98214</a>
+            <span>&bull;</span>
+            <a href="{{ url_for('public_track', q='Unit 402') }}" class="text-indigo-300 hover:underline">Unit 402</a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- Metric Summary Cards -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      
+      <!-- Total -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-soft hover:shadow-card transition-all">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">All Deliveries</span>
+          <div class="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+            <i data-lucide="boxes" class="w-5 h-5"></i>
+          </div>
+        </div>
+        <div class="mt-4">
+          <div class="text-2xl sm:text-3xl font-bold text-slate-900">{{ stats.total }}</div>
+          <p class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+            <i data-lucide="database" class="w-3.5 h-3.5 text-slate-400"></i>
+            Logged in system database
+          </p>
+        </div>
+      </div>
+
+      <!-- Ready for Pickup -->
+      <div class="bg-white p-5 rounded-2xl border border-emerald-200/80 shadow-soft hover:shadow-card transition-all relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-16 h-16 bg-emerald-500/10 rounded-bl-3xl"></div>
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-emerald-700 uppercase tracking-wider">Ready for Pickup</span>
+          <div class="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+            <i data-lucide="package-check" class="w-5 h-5"></i>
+          </div>
+        </div>
+        <div class="mt-4">
+          <div class="text-2xl sm:text-3xl font-bold text-emerald-900">{{ stats.pending }}</div>
+          <p class="text-xs text-emerald-600 font-medium mt-1 flex items-center gap-1">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 animate-ping"></span>
+            Currently stored in mailroom
+          </p>
+        </div>
+      </div>
+
+      <!-- Collected -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-soft hover:shadow-card transition-all">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Handed Over</span>
+          <div class="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
+            <i data-lucide="check-circle" class="w-5 h-5"></i>
+          </div>
+        </div>
+        <div class="mt-4">
+          <div class="text-2xl sm:text-3xl font-bold text-slate-900">{{ stats.collected }}</div>
+          <p class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+            <i data-lucide="shield-check" class="w-3.5 h-3.5 text-blue-500"></i>
+            Verified resident pickup
+          </p>
+        </div>
+      </div>
+
+      <!-- Arrived Today -->
+      <div class="bg-white p-5 rounded-2xl border border-slate-200/80 shadow-soft hover:shadow-card transition-all">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Today's Inflow</span>
+          <div class="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+            <i data-lucide="truck" class="w-5 h-5"></i>
+          </div>
+        </div>
+        <div class="mt-4">
+          <div class="text-2xl sm:text-3xl font-bold text-slate-900">{{ stats.today }}</div>
+          <p class="text-xs text-slate-500 mt-1 flex items-center gap-1">
+            <i data-lucide="calendar" class="w-3.5 h-3.5 text-amber-500"></i>
+            Parcels processed today
+          </p>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Interactive Role Launchpad -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="text-center max-w-2xl mx-auto mb-8">
+      <h2 class="text-2xl font-bold text-slate-900 tracking-tight">Two-Tier Role-Based Access</h2>
+      <p class="text-sm text-slate-500 mt-2">Test both perspectives seamlessly. Fast 1-click credentials available on login.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+      
+      <!-- Staff Role Card -->
+      <div class="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-6 border border-slate-200 shadow-soft flex flex-col justify-between hover:border-indigo-300 transition-all">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-indigo-50 text-indigo-700 border border-indigo-200">
+              Admin & Staff Desk
+            </span>
+            <i data-lucide="shield" class="w-5 h-5 text-indigo-600"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mt-4">Mailroom Operations & Intake</h3>
+          <p class="text-xs text-slate-600 mt-2 leading-relaxed">
+            Record incoming couriers (Amazon, FedEx, DHL), print thermal bin slips, assign rack locations, and process handovers with OTP verification.
+          </p>
+          <ul class="mt-4 space-y-2 text-xs text-slate-600">
+            <li class="flex items-center gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i> Rapid parcel intake with smart courier presets
+            </li>
+            <li class="flex items-center gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i> Visual storage bin & rack capacity manager
+            </li>
+            <li class="flex items-center gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i> Full tamper-proof audit trail of collections
+            </li>
+          </ul>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-200/80 flex items-center justify-between">
+          <div class="text-[11px] text-slate-500 font-mono">Demo: staff / staff123</div>
+          <a href="{{ url_for('login') }}" class="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm shadow-indigo-200">
+            <span>Staff Login</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </a>
+        </div>
+      </div>
+
+      <!-- Resident Role Card -->
+      <div class="bg-gradient-to-br from-white to-slate-50 rounded-2xl p-6 border border-slate-200 shadow-soft flex flex-col justify-between hover:border-emerald-300 transition-all">
+        <div>
+          <div class="flex items-center justify-between">
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Recipient & Resident Portal
+            </span>
+            <i data-lucide="user" class="w-5 h-5 text-emerald-600"></i>
+          </div>
+          <h3 class="text-lg font-bold text-slate-900 mt-4">Personal Deliveries & Pickup Pass</h3>
+          <p class="text-xs text-slate-600 mt-2 leading-relaxed">
+            Residents check their pending deliveries in real time, view their 6-digit pickup OTP to show at the desk, and review collection history.
+          </p>
+          <ul class="mt-4 space-y-2 text-xs text-slate-600">
+            <li class="flex items-center gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i> Real-time notification when courier reaches desk
+            </li>
+            <li class="flex items-center gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i> Mobile-ready digital Pickup Pass with QR code
+            </li>
+            <li class="flex items-center gap-2">
+              <i data-lucide="check" class="w-4 h-4 text-emerald-600"></i> Archive of past delivered items and timestamps
+            </li>
+          </ul>
+        </div>
+        <div class="mt-6 pt-4 border-t border-slate-200/80 flex items-center justify-between">
+          <div class="text-[11px] text-slate-500 font-mono">Demo: john_doe / user123</div>
+          <a href="{{ url_for('login') }}" class="px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold transition-colors flex items-center gap-1.5 shadow-sm">
+            <span>Resident Portal</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </a>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Live Recent Arrivals Table Preview -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-2xl border border-slate-200/80 shadow-soft overflow-hidden">
+      <div class="p-5 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <i data-lucide="activity" class="w-4 h-4 text-indigo-600"></i>
+            Live Mailroom Delivery Stream
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">Most recent incoming parcels registered at reception</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="{{ url_for('public_track') }}" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition-colors">
+            Lookup Tool
+          </a>
+          <a href="{{ url_for('dashboard') }}" class="px-3.5 py-1.5 rounded-lg bg-indigo-50 text-indigo-700 hover:bg-indigo-100 text-xs font-semibold transition-colors flex items-center gap-1">
+            <span>View Full Log</span>
+            <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+          </a>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-xs">
+          <thead class="bg-slate-50/80 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200/60">
+            <tr>
+              <th class="py-3 px-4">Tracking ID</th>
+              <th class="py-3 px-4">Carrier</th>
+              <th class="py-3 px-4">Recipient & Unit</th>
+              <th class="py-3 px-4">Storage Bin</th>
+              <th class="py-3 px-4">Status</th>
+              <th class="py-3 px-4">Arrival Time</th>
+              <th class="py-3 px-4 text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100">
+            {% for p in recent_packages %}
+            <tr class="hover:bg-slate-50/60 transition-colors">
+              <td class="py-3 px-4 font-mono font-medium text-slate-900">
+                <a href="{{ url_for('package_detail', package_id=p['id']) }}" class="text-indigo-600 hover:underline">
+                  {{ p['tracking_number'] }}
+                </a>
+              </td>
+              <td class="py-3 px-4">
+                <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-100 font-medium text-slate-700">
+                  {{ p['courier_name'] }}
+                </span>
+              </td>
+              <td class="py-3 px-4">
+                <div class="font-semibold text-slate-800">{{ p['recipient_name'] }}</div>
+                <div class="text-[11px] text-slate-500">{{ p['recipient_unit'] }}</div>
+              </td>
+              <td class="py-3 px-4">
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-50 text-amber-800 border border-amber-200/60 font-mono font-semibold">
+                  <i data-lucide="map-pin" class="w-3 h-3 text-amber-600"></i>
+                  {{ p['storage_bin'] }}
+                </span>
+              </td>
+              <td class="py-3 px-4">
+                {% if p['status'] == 'Ready for Pickup' %}
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-semibold text-[11px]">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    Ready for Pickup
+                  </span>
+                {% else %}
+                  <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200 font-semibold text-[11px]">
+                    <i data-lucide="check" class="w-3 h-3 text-slate-500"></i>
+                    Collected
+                  </span>
+                {% endif %}
+              </td>
+              <td class="py-3 px-4 text-slate-500">
+                {{ p['arrival_date'][:16] }}
+              </td>
+              <td class="py-3 px-4 text-right">
+                <a href="{{ url_for('package_detail', package_id=p['id']) }}" class="text-indigo-600 hover:text-indigo-800 font-semibold inline-flex items-center gap-1">
+                  <span>Details</span>
+                  <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </a>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+</div>
+{% endblock %}
